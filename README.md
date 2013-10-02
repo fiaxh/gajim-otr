@@ -1,0 +1,4 @@
+gotr
+====
+
+Gajim OTR plugin
