@@ -480,13 +480,14 @@ class OtrPlugin(GajimPlugin):
                 if ctrl:
                     ctrl.print_conversation_line(u'[OTR] %s' % msg, 'status',
                             '', None)
-            id = gajim.logger.write('chat_msg_recv', fjid,
-                    message=u'[OTR: %s]' % msg, tim=tim)
-            # gajim.logger.write() only marks a message as unread (and so
-            # only returns an id) when fjid is a real contact (NOT if it's a
-            # GC private chat)
-            if id:
-                gajim.logger.set_read_messages([id])
+            if gajim.config.should_log(account, jid):
+                id = gajim.logger.write('chat_msg_recv', fjid,
+                        message=u'[OTR: %s]' % msg, tim=tim)
+                # gajim.logger.write() only marks a message as unread (and so
+                # only returns an id) when fjid is a real contact (NOT if it's a
+                # GC private chat)
+                if id:
+                    gajim.logger.set_read_messages([id])
         else:
             session = gajim.connections[account].get_or_create_session(fjid,
                     thread_id)
@@ -500,10 +501,11 @@ class OtrPlugin(GajimPlugin):
                     session.control = ctrl
                     session.control.set_session(session)
 
-            msg_id = gajim.logger.write('chat_msg_recv', fjid,
-                    message=u'[OTR: %s]' % msg, tim=tim)
-            session.roster_message(jid, msg, tim=tim, msg_id=msg_id,
-                    msg_type='chat', resource=resource)
+            if gajim.config.should_log(account, jid):
+                msg_id = gajim.logger.write('chat_msg_recv', fjid,
+                        message=u'[OTR: %s]' % msg, tim=tim)
+                session.roster_message(jid, msg, tim=tim, msg_id=msg_id,
+                        msg_type='chat', resource=resource)
 
     @classmethod
     def update_otr(cls, user, acc, print_status=False):
