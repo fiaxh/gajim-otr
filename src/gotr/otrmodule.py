@@ -277,6 +277,8 @@ class OtrPlugin(GajimPlugin):
         self.events_handlers = {}
         self.events_handlers['message-received'] = (ged.PRECORE,
                 self.handle_incoming_msg)
+        self.events_handlers['before-change-show'] = (ged.PRECORE,
+                self.handle_change_show)
         self.events_handlers['message-outgoing'] = (ged.OUT_PRECORE,
                 self.handle_outgoing_msg)
 
@@ -528,6 +530,17 @@ class OtrPlugin(GajimPlugin):
         if ctrl and ctrl.TYPE_ID == TYPE_CHAT:
             return ctrl
 
+    def handle_change_show(self, event):
+        account = event.conn.name
+
+        if event.show == 'offline':
+            for us in self.us.itervalues():
+                for fjid, ctx in us.ctxs.iteritems():
+                    if ctx.state == potr.context.STATE_ENCRYPTED:
+                        self.us[account].getContext(fjid).disconnect()
+
+        return PASS
+
     def handle_incoming_msg(self, event):
         ctx = None
         account = event.conn.name
@@ -682,5 +695,3 @@ def escape(s):
     s = s.replace("\n", "<br/>")
     return s
 
-## TODO:
-##  - disconnect ctxs on disconnect
