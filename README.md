@@ -1,7 +1,10 @@
 gotr
 ====
 gotr is a plugin to enable OTR support in the Gajim XMPP/Jabber client. It
-depends on potr (see [afflux/pure-python-otr](https://github.com/afflux/pure-python-otr)).
+depends on potr (see [python-otr/pure-python-otr](https://github.com/python-otr/pure-python-otr)).
+
+This software is experimental and potentially insecure. Do not rely on it
+=========================================================================
 
 Installation
 ============
@@ -18,5 +21,5 @@ interface.
 
 Reporting bugs
 ==============
-Please read the [FAQ](https://github.com/afflux/gotr/wiki) before submitting your
-issue to the [tracker](https://github.com/afflux/gotr/issues).
+Please read the [FAQ](https://github.com/python-otr/gotr/wiki) before submitting your
+issue to the [tracker](https://github.com/python-otr/gotr/issues).
