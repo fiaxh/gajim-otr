@@ -5,6 +5,7 @@ depends on potr (see [python-otr/pure-python-otr](https://github.com/python-otr/
 
 This software is experimental and potentially insecure. Do not rely on it
 =========================================================================
+It's also not actively maintained for quite some time now. Feel free to contact [the author](https://github.com/afflux) if you want to take over.
 
 Installation
 ============
