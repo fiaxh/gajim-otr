@@ -46,6 +46,8 @@ DEFAULTFLAGS = {
 MMS = 1024
 PROTOCOL = 'xmpp'
 
+VERSION_OUTGOING_MSG_STAZA = "0.16.4"
+
 enc_tip = 'A private chat session <i>is established</i> to this contact ' \
         'with this fingerprint'
 unused_tip = 'A private chat session is established to this contact using ' \
@@ -53,15 +55,21 @@ unused_tip = 'A private chat session is established to this contact using ' \
 ended_tip = 'The private chat session to this contact has <i>ended</i>'
 inactive_tip = 'Communication to this contact is currently ' \
         '<i>unencrypted</i>'
+msg_not_send = _('Your message was not send. Either end '
+                 'your private conversation, or restart it')
+
 
 import logging
+import nbxmpp
 import os
 import pickle
 import time
 import sys
 from pprint import pformat
+from distutils.version import StrictVersion
 
 import common.xmpp
+from common import defs
 from common import gajim
 from common import ged
 from common.connection_handlers_events import MessageOutgoingEvent
@@ -279,8 +287,12 @@ class OtrPlugin(GajimPlugin):
                 self.handle_incoming_msg)
         self.events_handlers['before-change-show'] = (ged.PRECORE,
                 self.handle_change_show)
-        self.events_handlers['message-outgoing'] = (ged.OUT_PRECORE,
-                self.handle_outgoing_msg)
+        if StrictVersion(defs.version) < StrictVersion(VERSION_OUTGOING_MSG_STAZA):
+            self.events_handlers['message-outgoing'] = (ged.OUT_PRECORE,
+                    self.handle_outgoing_msg)
+        else:
+            self.events_handlers['stanza-message-outgoing'] = (ged.OUT_PRECORE,
+                    self.handle_outgoing_msg_stanza)
 
         self.gui_extension_points = {
                     'chat_control' : (self.cc_connect, self.cc_disconnect)
@@ -605,6 +617,37 @@ class OtrPlugin(GajimPlugin):
 
         return PASS
 
+    def handle_outgoing_msg_stanza(self, event):
+        xhtml = event.msg_iq.getXHTML()
+        body = event.msg_iq.getBody()
+
+        try:
+            if xhtml:
+                xhtml.encode('utf8')
+                encrypted_msg = self.us[event.conn.name].\
+                    getContext(event.msg_iq.getTo()).\
+                    sendMessage(potr.context.FRAGMENT_SEND_ALL_BUT_LAST, xhtml)
+                event.msg_iq.setXHTML(encrypted_msg)
+            elif body:
+                body = escape(body)
+                body.encode('utf8')
+                encrypted_msg = self.us[event.conn.name].\
+                    getContext(event.msg_iq.getTo()).\
+                    sendMessage(potr.context.FRAGMENT_SEND_ALL_BUT_LAST, body)
+
+                event.msg_iq.setBody(encrypted_msg)
+        except potr.context.NotEncryptedError, e:
+            if e.args[0] == potr.context.EXC_FINISHED:
+                self.gajim_log(msg_not_send, event.conn.name, event.msg_iq.getTo())
+                return IGNORE
+            else:
+                raise e
+
+        if event.conn.carbons_enabled:
+           event.msg_iq.addChild(name='private', namespace=nbxmpp.NS_CARBONS)
+
+        return PASS
+
     def handle_outgoing_msg(self, event):
         try:
             if hasattr(event, 'otrmessage'):
@@ -635,9 +678,7 @@ class OtrPlugin(GajimPlugin):
                 potrrootlog.debug('processed message={0!r}'.format(newmsg))
             except potr.context.NotEncryptedError, e:
                 if e.args[0] == potr.context.EXC_FINISHED:
-                    self.gajim_log(_('Your message was not send. Either end '
-                        'your private conversation, or restart it'), event.account,
-                        fjid)
+                    self.gajim_log(msg_not_send, event.account, fjid)
                     return IGNORE
                 else:
                     raise e
