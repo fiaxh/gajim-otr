@@ -671,7 +671,6 @@ class OtrPlugin(GajimPlugin):
 
             message = event.xhtml or escape(event.message)
             message = message.encode('utf8')
-            print message
 
             potrrootlog.debug('processing message={0!r} from fjid={1!r}'.format(message, fjid))
 
@@ -679,7 +678,6 @@ class OtrPlugin(GajimPlugin):
                 newmsg = self.us[event.account].getContext(fjid).sendMessage(
                         potr.context.FRAGMENT_SEND_ALL_BUT_LAST, message,
                         appdata={'session':event.session})
-                print newmsg
                 potrrootlog.debug('processed message={0!r}'.format(newmsg))
             except potr.context.NotEncryptedError, e:
                 if e.args[0] == potr.context.EXC_FINISHED:
