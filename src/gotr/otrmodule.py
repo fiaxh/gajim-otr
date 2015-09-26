@@ -623,22 +623,24 @@ class OtrPlugin(GajimPlugin):
     def handle_outgoing_msg_stanza(self, event):
         xhtml = event.msg_iq.getXHTML()
         body = event.msg_iq.getBody()
-
+        encrypted = False
         try:
             if xhtml:
-                xhtml.encode('utf8')
+                xhtml = xhtml.encode('utf8')
                 encrypted_msg = self.us[event.conn.name].\
                     getContext(event.msg_iq.getTo()).\
                     sendMessage(potr.context.FRAGMENT_SEND_ALL_BUT_LAST, xhtml)
-                event.msg_iq.setXHTML(encrypted_msg)
+                if xhtml != encrypted_msg.strip(): #.strip() because sendMessage() adds whitespaces
+                    encrypted = True
+                    event.msg_iq.setXHTML(encrypted_msg)
             elif body:
-                body = escape(body)
-                body.encode('utf8')
+                body = escape(body).encode('utf8')
                 encrypted_msg = self.us[event.conn.name].\
                     getContext(event.msg_iq.getTo()).\
                     sendMessage(potr.context.FRAGMENT_SEND_ALL_BUT_LAST, body)
-
-                event.msg_iq.setBody(encrypted_msg)
+                if body != encrypted_msg.strip():
+                    encrypted = True
+                    event.msg_iq.setBody(encrypted_msg)
         except potr.context.NotEncryptedError, e:
             if e.args[0] == potr.context.EXC_FINISHED:
                 self.gajim_log(msg_not_send, event.conn.name, event.msg_iq.getTo())
@@ -646,8 +648,8 @@ class OtrPlugin(GajimPlugin):
             else:
                 raise e
 
-        if event.conn.carbons_enabled:
-           event.msg_iq.addChild(name='private', namespace=nbxmpp.NS_CARBONS)
+        if encrypted and event.conn.carbons_enabled:
+            event.msg_iq.addChild(name='private', namespace=nbxmpp.NS_CARBONS)
 
         return PASS
 
